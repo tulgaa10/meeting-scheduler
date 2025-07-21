@@ -469,13 +469,13 @@
             });
         }
 
-        const AD = "olchijbgamu"; 
-        let isAdL = false;
+        const ADMIN_PASSCODE = "olchijbgamu"; 
+        let isAdminLoggedIn = false;
 
         function checkAdminAccess() {
             const enteredPasscode = document.getElementById('adminPasscode').value;
             
-            if (enteredPasscode === AD) {
+            if (enteredPasscode === ADMIN_PASSCODE) {
                 isAdL = true;
                 document.getElementById('admin-login').style.display = 'none';
                 document.getElementById('admin-panel').style.display = 'block';
