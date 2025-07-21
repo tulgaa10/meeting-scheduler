@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Scheduler - Participant Availability</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #64748b;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-tab.active {
+            color: #4f46e5;
+            background: white;
+        }
+
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 1.1rem;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .time-grid {
+            display: grid;
+            grid-template-columns: auto repeat(7, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .time-header {
+            font-weight: 700;
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+
+        .time-slot {
+            font-weight: 600;
+            color: #374151;
+            padding: 15px 10px;
+            text-align: right;
+            font-size: 0.9rem;
+        }
+
+        .availability-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            transform: scale(1.2);
+            margin: 0 auto;
+            display: block;
+        }
+
+        .availability-checkbox:checked {
+            accent-color: #4f46e5;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6b7280, #9ca3af);
+            margin-left: 15px;
+        }
+
+        .participant-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .participant-card:hover {
+            border-color: #4f46e5;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .participant-id {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4f46e5;
+            margin-bottom: 15px;
+        }
+
+        .availability-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .day-summary {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #4f46e5;
+        }
+
+        .day-name {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .available-times {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .success-message {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 600;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .export-section {
+            background: #f8fafc;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .export-section h3 {
+            color: #374151;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .tab-content {
+                padding: 20px;
+            }
+            
+            .time-grid {
+                grid-template-columns: auto repeat(7, 1fr);
+                gap: 8px;
+                padding: 15px;
+            }
+            
+            .time-header {
+                font-size: 0.8rem;
+                padding: 10px 5px;
+            }
+            
+            .time-slot {
+                font-size: 0.8rem;
+                padding: 10px 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Meeting Scheduler</h1>
+            <p>Collect participant availability for weekly meetings</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('submit')">Submit Availability</button>
+            <button class="nav-tab" onclick="showTab('view')">View All Data</button>
+        </div>
+
+        <div id="submit-tab" class="tab-content active">
+            <form id="availabilityForm">
+                <div class="form-group">
+                    <label for="participantId">Participant ID (1-22):</label>
+                    <select id="participantId" required>
+                        <option value="">Select your participant ID</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="participantName">Your Name (Optional):</label>
+                    <input type="text" id="participantName" placeholder="Enter your name">
+                </div>
+
+                <div class="form-group">
+                    <label>Select your available time slots:</label>
+                    <div class="time-grid" id="timeGrid">
+                        <div class="time-header">Time</div>
+                        <div class="time-header">Mon</div>
+                        <div class="time-header">Tue</div>
+                        <div class="time-header">Wed</div>
+                        <div class="time-header">Thu</div>
+                        <div class="time-header">Fri</div>
+                        <div class="time-header">Sat</div>
+                        <div class="time-header">Sun</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">Submit Availability</button>
+                <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear Form</button>
+            </form>
+        </div>
+
+        <div id="view-tab" class="tab-content">
+            <div class="export-section">
+                <h3>Export Data</h3>
+                <button class="btn" onclick="exportToJSON()">Export as JSON</button>
+                <button class="btn btn-secondary" onclick="exportToCSV()">Export as CSV</button>
+            </div>
+            
+            <div id="allParticipants"></div>
+        </div>
+    </div>
+
+    <script>
+        // Time slots (24-hour format, 1-hour intervals from 14:00 to 22:00)
+        const timeSlots = [
+            '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'
+        ];
+
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        const dayAbbr = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+        // Initialize the form
+        function initializeForm() {
+            // Populate participant ID dropdown
+            const participantSelect = document.getElementById('participantId');
+            const submittedData = JSON.parse(window.participantData || '{}');
+            
+            for (let i = 1; i <= 22; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                const hasSubmitted = submittedData[i] ? ' (Already submitted)' : '';
+                option.textContent = `Participant ${i}${hasSubmitted}`;
+                participantSelect.appendChild(option);
+            }
+
+            // Create time grid
+            const timeGrid = document.getElementById('timeGrid');
+            timeSlots.forEach(time => {
+                const timeSlot = document.createElement('div');
+                timeSlot.className = 'time-slot';
+                timeSlot.textContent = time;
+                timeGrid.appendChild(timeSlot);
+
+                days.forEach((day, dayIndex) => {
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'availability-checkbox';
+                    checkbox.name = `${day}_${time}`;
+                    checkbox.id = `${day}_${time}`;
+                    timeGrid.appendChild(checkbox);
+                });
+            });
+        }
+
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'view') {
+                displayAllParticipants();
+            }
+        }
+
+        // Form submission
+        document.getElementById('availabilityForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const participantId = document.getElementById('participantId').value;
+            const participantName = document.getElementById('participantName').value;
+            
+            if (!participantId) {
+                alert('Please select your participant ID');
+                return;
+            }
+
+            // Check if participant has already submitted
+            let allData = JSON.parse(window.participantData || '{}');
+            if (allData[participantId]) {
+                const overwrite = confirm(`Participant ${participantId} has already submitted their availability. Do you want to update it?`);
+                if (!overwrite) {
+                    return;
+                }
+            }
+
+            const availability = {};
+            days.forEach(day => {
+                availability[day] = [];
+                timeSlots.forEach(time => {
+                    const checkbox = document.getElementById(`${day}_${time}`);
+                    if (checkbox.checked) {
+                        availability[day].push(time);
+                    }
+                });
+            });
+
+            // Store participant data
+            allData[participantId] = {
+                id: participantId,
+                name: participantName || `Participant ${participantId}`,
+                availability: availability,
+                submittedAt: new Date().toISOString()
+            };
+
+            // Save to memory
+            window.participantData = JSON.stringify(allData);
+
+            // Show success message
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.textContent = allData[participantId] ? 
+                'Availability updated successfully!' : 'Availability submitted successfully!';
+            document.getElementById('submit-tab').insertBefore(successDiv, document.getElementById('availabilityForm'));
+
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+
+            // Clear form
+            clearForm();
+        });
+
+        // Clear form
+        function clearForm() {
+            document.getElementById('participantId').value = '';
+            document.getElementById('participantName').value = '';
+            document.querySelectorAll('.availability-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+
+        // Display all participants
+        function displayAllParticipants() {
+            const container = document.getElementById('allParticipants');
+            const data = JSON.parse(window.participantData || '{}');
+            
+            if (Object.keys(data).length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 1.1rem; padding: 40px;">No participant data available yet.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            Object.values(data)
+                .sort((a, b) => parseInt(a.id) - parseInt(b.id))
+                .forEach(participant => {
+                    const card = document.createElement('div');
+                    card.className = 'participant-card';
+                    
+                    card.innerHTML = `
+                        <div class="participant-id">Participant ${participant.id}</div>
+                        <p><strong>Name:</strong> ${participant.name}</p>
+                        <p><strong>Submitted:</strong> ${new Date(participant.submittedAt).toLocaleString()}</p>
+                        <div class="availability-summary">
+                            ${days.map((day, index) => `
+                                <div class="day-summary">
+                                    <div class="day-name">${day.charAt(0).toUpperCase() + day.slice(1)}</div>
+                                    <div class="available-times">
+                                        ${participant.availability[day].length > 0 
+                                            ? participant.availability[day].join(', ')
+                                            : 'Not available'
+                                        }
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    
+                    container.appendChild(card);
+                });
+        }
+
+        // Export functions
+        function exportToJSON() {
+            const data = window.participantData || '{}';
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `meeting_availability_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportToCSV() {
+            const data = JSON.parse(window.participantData || '{}');
+            if (Object.keys(data).length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            let csv = 'Participant ID,Name,Submitted At';
+            
+            // Add day/time columns
+            days.forEach(day => {
+                timeSlots.forEach(time => {
+                    csv += `,${day.charAt(0).toUpperCase() + day.slice(1)} ${time}`;
+                });
+            });
+            csv += '\n';
+
+            // Add participant data
+            Object.values(data)
+                .sort((a, b) => parseInt(a.id) - parseInt(b.id))
+                .forEach(participant => {
+                    csv += `${participant.id},"${participant.name}","${participant.submittedAt}"`;
+                    
+                    days.forEach(day => {
+                        timeSlots.forEach(time => {
+                            csv += `,${participant.availability[day].includes(time) ? 'Yes' : 'No'}`;
+                        });
+                    });
+                    csv += '\n';
+                });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `meeting_availability_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize when page loads
+        window.participantData = '{}';
+        initializeForm();
+    </script>
+</body>
+</html>
