@@ -112,7 +112,7 @@
             font-size: 1.1rem;
         }
 
-        select, input[type="text"] {
+        select, input[type="text"], input[type="password"] {
             width: 100%;
             padding: 15px;
             border: 2px solid #e5e7eb;
@@ -122,7 +122,7 @@
             background: white;
         }
 
-        select:focus, input[type="text"]:focus {
+        select:focus, input[type="text"]:focus, input[type="password"]:focus {
             outline: none;
             border-color: #4f46e5;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
@@ -311,6 +311,8 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         }
+
+        @media (max-width: 768px) {
             .container {
                 margin: 10px;
                 border-radius: 15px;
@@ -436,6 +438,30 @@
         const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
         const dayAbbr = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
+        // Tab switching functionality
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Add active class to clicked nav tab
+            event.target.classList.add('active');
+            
+            // Refresh data when switching to view tab
+            if (tabName === 'view') {
+                displayAllParticipants();
+            }
+        }
+
         // Initialize the form
         function initializeForm() {
             // Populate participant ID dropdown
@@ -469,14 +495,15 @@
             });
         }
 
-        const ADMIN_PASSCODE = "olchijbgamu"; 
+        // Admin functionality
+        const ADMIN_PASSCODE = "admin123"; // Change this to your desired passcode
         let isAdminLoggedIn = false;
 
         function checkAdminAccess() {
             const enteredPasscode = document.getElementById('adminPasscode').value;
             
             if (enteredPasscode === ADMIN_PASSCODE) {
-                isAdL = true;
+                isAdminLoggedIn = true;
                 document.getElementById('admin-login').style.display = 'none';
                 document.getElementById('admin-panel').style.display = 'block';
                 displayAdminParticipants();
@@ -575,71 +602,72 @@
             }
         }
 
-        // Allow Enter key to submit admin passcode
+        // Form submission
         document.addEventListener('DOMContentLoaded', function() {
+            // Allow Enter key to submit admin passcode
             document.getElementById('adminPasscode').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     checkAdminAccess();
                 }
             });
-        });
 
-        // Form submission
-        document.getElementById('availabilityForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const participantId = document.getElementById('participantId').value;
-            const participantName = document.getElementById('participantName').value;
-            
-            if (!participantId) {
-                alert('Please select your participant ID');
-                return;
-            }
-
-            // Check if participant has already submitted
-            let allData = JSON.parse(window.participantData || '{}');
-            if (allData[participantId]) {
-                const overwrite = confirm(`Participant ${participantId} has already submitted their availability. Do you want to update it?`);
-                if (!overwrite) {
+            // Form submission handler
+            document.getElementById('availabilityForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const participantId = document.getElementById('participantId').value;
+                const participantName = document.getElementById('participantName').value;
+                
+                if (!participantId) {
+                    alert('Please select your participant ID');
                     return;
                 }
-            }
 
-            const availability = {};
-            days.forEach(day => {
-                availability[day] = [];
-                timeSlots.forEach(time => {
-                    const checkbox = document.getElementById(`${day}_${time}`);
-                    if (checkbox.checked) {
-                        availability[day].push(time);
+                // Check if participant has already submitted
+                let allData = JSON.parse(window.participantData || '{}');
+                if (allData[participantId]) {
+                    const overwrite = confirm(`Participant ${participantId} has already submitted their availability. Do you want to update it?`);
+                    if (!overwrite) {
+                        return;
                     }
+                }
+
+                const availability = {};
+                days.forEach(day => {
+                    availability[day] = [];
+                    timeSlots.forEach(time => {
+                        const checkbox = document.getElementById(`${day}_${time}`);
+                        if (checkbox.checked) {
+                            availability[day].push(time);
+                        }
+                    });
                 });
+
+                // Store participant data
+                allData[participantId] = {
+                    id: participantId,
+                    name: participantName || `Participant ${participantId}`,
+                    availability: availability,
+                    submittedAt: new Date().toISOString()
+                };
+
+                // Save to memory
+                window.participantData = JSON.stringify(allData);
+
+                // Show success message
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success-message';
+                successDiv.textContent = allData[participantId] ? 
+                    'Availability updated successfully!' : 'Availability submitted successfully!';
+                document.getElementById('submit-tab').insertBefore(successDiv, document.getElementById('availabilityForm'));
+
+                setTimeout(() => {
+                    successDiv.remove();
+                }, 3000);
+
+                // Clear form
+                clearForm();
             });
-
-            // Store participant data
-            allData[participantId] = {
-                id: participantId,
-                name: participantName || `Participant ${participantId}`,
-                availability: availability,
-                submittedAt: new Date().toISOString()
-            };
-
-            // Save to memory
-            window.participantData = JSON.stringify(allData);
-
-            // Show success message
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success-message';
-            successDiv.textContent = allData[participantId] ? 
-                'Availability updated successfully!' : 'Availability submitted successfully!';
-            document.getElementById('submit-tab').insertBefore(successDiv, document.getElementById('availabilityForm'));
-
-            setTimeout(() => {
-                successDiv.remove();
-            }, 3000);
-
-            // Clear form
-            clearForm();
         });
 
         // Clear form
