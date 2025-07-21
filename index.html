@@ -469,15 +469,14 @@
             });
         }
 
-        // Admin functionality
-        const ADMIN_PASSCODE = "7eda0dcf5eef"; // Change this to your desired passcode
-        let isAdminLoggedIn = false;
+        const AD = "olchijbgamu"; 
+        let isAdL = false;
 
         function checkAdminAccess() {
             const enteredPasscode = document.getElementById('adminPasscode').value;
             
-            if (enteredPasscode === ADMIN_PASSCODE) {
-                isAdminLoggedIn = true;
+            if (enteredPasscode === AD) {
+                isAdL = true;
                 document.getElementById('admin-login').style.display = 'none';
                 document.getElementById('admin-panel').style.display = 'block';
                 displayAdminParticipants();
