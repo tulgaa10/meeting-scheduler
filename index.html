@@ -275,7 +275,42 @@
             font-size: 1.3rem;
         }
 
-        @media (max-width: 768px) {
+        .delete-btn {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        .delete-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .admin-participant-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-participant-card:hover {
+            border-color: #4f46e5;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
             .container {
                 margin: 10px;
                 border-radius: 15px;
@@ -321,6 +356,7 @@
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showTab('submit')">Submit Availability</button>
             <button class="nav-tab" onclick="showTab('view')">View All Data</button>
+            <button class="nav-tab" onclick="showTab('admin')">Admin</button>
         </div>
 
         <div id="submit-tab" class="tab-content active">
@@ -364,6 +400,30 @@
             </div>
             
             <div id="allParticipants"></div>
+        </div>
+
+        <div id="admin-tab" class="tab-content">
+            <div id="admin-login" class="export-section">
+                <h3>Admin Access</h3>
+                <p style="color: #6b7280; margin-bottom: 20px;">Enter the admin passcode to access management features.</p>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <input type="password" id="adminPasscode" placeholder="Enter passcode" style="flex: 1; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px;">
+                    <button class="btn" onclick="checkAdminAccess()">Login</button>
+                </div>
+            </div>
+            
+            <div id="admin-panel" style="display: none;">
+                <div class="export-section">
+                    <h3>Admin Panel</h3>
+                    <p style="color: #059669; font-weight: 600; margin-bottom: 20px;">✓ Admin access granted</p>
+                    <div style="display: flex; gap: 15px; margin-bottom: 30px;">
+                        <button class="btn" onclick="clearAllData()">Clear All Data</button>
+                        <button class="btn btn-secondary" onclick="logoutAdmin()">Logout</button>
+                    </div>
+                </div>
+                
+                <div id="adminParticipantList"></div>
+            </div>
         </div>
     </div>
 
@@ -409,22 +469,121 @@
             });
         }
 
-        // Tab switching
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
+        // Admin functionality
+        const ADMIN_PASSCODE = "admin123"; // Change this to your desired passcode
+        let isAdminLoggedIn = false;
 
-            document.getElementById(`${tabName}-tab`).classList.add('active');
-            event.target.classList.add('active');
-
-            if (tabName === 'view') {
-                displayAllParticipants();
+        function checkAdminAccess() {
+            const enteredPasscode = document.getElementById('adminPasscode').value;
+            
+            if (enteredPasscode === ADMIN_PASSCODE) {
+                isAdminLoggedIn = true;
+                document.getElementById('admin-login').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                displayAdminParticipants();
+            } else {
+                alert('Incorrect passcode. Access denied.');
+                document.getElementById('adminPasscode').value = '';
             }
         }
+
+        function logoutAdmin() {
+            isAdminLoggedIn = false;
+            document.getElementById('admin-login').style.display = 'block';
+            document.getElementById('admin-panel').style.display = 'none';
+            document.getElementById('adminPasscode').value = '';
+        }
+
+        function displayAdminParticipants() {
+            const container = document.getElementById('adminParticipantList');
+            const data = JSON.parse(window.participantData || '{}');
+            
+            if (Object.keys(data).length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 1.1rem; padding: 40px;">No participant data to manage.</p>';
+                return;
+            }
+
+            container.innerHTML = '<h3 style="color: #374151; margin-bottom: 20px;">Manage Participants</h3>';
+            
+            Object.values(data)
+                .sort((a, b) => parseInt(a.id) - parseInt(b.id))
+                .forEach(participant => {
+                    const card = document.createElement('div');
+                    card.className = 'admin-participant-card';
+                    
+                    card.innerHTML = `
+                        <div>
+                            <div style="font-size: 1.3rem; font-weight: 700; color: #4f46e5; margin-bottom: 5px;">
+                                Participant ${participant.id}
+                            </div>
+                            <div style="color: #6b7280;">
+                                <strong>Name:</strong> ${participant.name} | 
+                                <strong>Submitted:</strong> ${new Date(participant.submittedAt).toLocaleDateString()}
+                            </div>
+                        </div>
+                        <button class="delete-btn" onclick="removeParticipant('${participant.id}')">
+                            Delete
+                        </button>
+                    `;
+                    
+                    container.appendChild(card);
+                });
+        }
+
+        function removeParticipant(participantId) {
+            const confirmed = confirm(`Are you sure you want to delete Participant ${participantId}'s data? This action cannot be undone.`);
+            
+            if (confirmed) {
+                let allData = JSON.parse(window.participantData || '{}');
+                delete allData[participantId];
+                window.participantData = JSON.stringify(allData);
+                
+                // Refresh admin view
+                displayAdminParticipants();
+                
+                // Show success message
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success-message';
+                successDiv.textContent = `Participant ${participantId} data deleted successfully.`;
+                document.getElementById('admin-panel').insertBefore(successDiv, document.getElementById('adminParticipantList'));
+                
+                setTimeout(() => {
+                    successDiv.remove();
+                }, 3000);
+            }
+        }
+
+        function clearAllData() {
+            const confirmed = confirm('Are you sure you want to delete ALL participant data? This action cannot be undone.');
+            
+            if (confirmed) {
+                const doubleConfirm = confirm('This will permanently delete all submissions. Are you absolutely sure?');
+                
+                if (doubleConfirm) {
+                    window.participantData = '{}';
+                    displayAdminParticipants();
+                    
+                    // Show success message
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'success-message';
+                    successDiv.textContent = 'All participant data has been cleared.';
+                    document.getElementById('admin-panel').insertBefore(successDiv, document.getElementById('adminParticipantList'));
+                    
+                    setTimeout(() => {
+                        successDiv.remove();
+                    }, 3000);
+                }
+            }
+        }
+
+        // Allow Enter key to submit admin passcode
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('adminPasscode').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    checkAdminAccess();
+                }
+            });
+        });
 
         // Form submission
         document.getElementById('availabilityForm').addEventListener('submit', function(e) {
@@ -503,7 +662,37 @@
                 return;
             }
 
-            container.innerHTML = '';
+            // Create summary of submitted participants
+            const submittedIds = Object.keys(data).map(id => parseInt(id)).sort((a, b) => a - b);
+            const totalParticipants = 22;
+            const submittedCount = submittedIds.length;
+            const pendingIds = [];
+            
+            for (let i = 1; i <= totalParticipants; i++) {
+                if (!submittedIds.includes(i)) {
+                    pendingIds.push(i);
+                }
+            }
+
+            container.innerHTML = `
+                <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 25px; border-radius: 15px; margin-bottom: 30px;">
+                    <h3 style="margin: 0 0 15px 0; font-size: 1.5rem;">Submission Status</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                        <div>
+                            <h4 style="margin: 0 0 10px 0; font-size: 1.1rem;">Submitted (${submittedCount}/${totalParticipants})</h4>
+                            <div style="background: rgba(255, 255, 255, 0.2); padding: 10px; border-radius: 8px; font-weight: 600;">
+                                ${submittedIds.length > 0 ? submittedIds.join(', ') : 'None'}
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style="margin: 0 0 10px 0; font-size: 1.1rem;">Pending (${pendingIds.length}/${totalParticipants})</h4>
+                            <div style="background: rgba(255, 255, 255, 0.2); padding: 10px; border-radius: 8px; font-weight: 600;">
+                                ${pendingIds.length > 0 ? pendingIds.join(', ') : 'All submitted!'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
             
             Object.values(data)
                 .sort((a, b) => parseInt(a.id) - parseInt(b.id))
